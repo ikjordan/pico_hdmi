@@ -2,7 +2,7 @@
 
 An HSTX-native HDMI output library for the RP2350 (Raspberry Pi Pico 2).
 
-Unlike the original PicoDVI for RP2040 which required CPU-intensive PIO bit-banging, PicoHDMI leverages the RP2350's dedicated **HSTX (High-Speed Transmit)** peripheral with hardware TMDS encoding. This means near-zero CPU overhead for video output.
+PicoHDMI leverages the RP2350's dedicated **HSTX (High-Speed Transmit)** peripheral with hardware TMDS encoding. No bit-banging, no overclocking required: just near-zero CPU overhead for video output.
 
 ## Overview
 

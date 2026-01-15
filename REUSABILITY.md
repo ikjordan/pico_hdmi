@@ -2,19 +2,19 @@
 
 This document outlines the planned architectural changes to transition `pico_hdmi` from a firmware-specific component to a generic, reusable library for any RP2350 project requiring HSTX-based DVI/HDMI output.
 
-## Priority 1: High - Decouple Pixel Source (Provider Pattern)
+## Priority 1: Completed - Decouple Pixel Source (Provider Pattern)
 
-Currently, the library's DMA ISR assumes a specific 320x240 RGB565 framebuffer and performs hardcoded line doubling.
+The library has been updated to use a scanline callback mechanism instead of a hardcoded framebuffer.
 
-### Planned Change:
+### Change:
 
-- **Remove** the global `framebuf` pointer from the library.
-- **Implement** a scanline callback mechanism:
+- **Removed** the global `framebuf` pointer from the library.
+- **Implemented** a scanline callback mechanism:
   ```c
-  typedef void (*video_output_fill_fn)(uint16_t *line_buffer, uint32_t line_num);
+  typedef void (*video_output_scanline_cb_t)(uint32_t v_scanline, uint32_t active_line, uint32_t *line_buffer);
   ```
-- The library will provide a double-buffered internal line buffer (640 pixels).
-- The ISR will call the user-provided function to fill the "next" buffer while the current one is being sent via DMA.
+- The library provides a double-buffered internal line buffer (640 pixels).
+- The ISR calls the user-provided function to fill the "next" buffer while the current one is being sent via DMA.
 
 ## Priority 2: High - Parameterize HDMI Metadata
 

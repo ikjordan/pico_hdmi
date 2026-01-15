@@ -43,6 +43,7 @@ brew install pre-commit
 ```
 
 On Linux:
+
 ```bash
 pip install pre-commit
 ```
@@ -56,6 +57,8 @@ pre-commit install
 ```
 
 Once installed, the hooks will automatically format your code and run static analysis whenever you commit.
+
+> **Note**: If a hook fails and modifies your files (e.g., `clang-format`), you will need to `git add` those changes and commit again.
 
 To manually run the checks on all files:
 

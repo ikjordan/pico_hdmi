@@ -84,6 +84,9 @@ reference/*.flac
 reference/*.mp3
 venv/
 
+# Compilation database
+compile_commands.json
+
 # hstx_lab dependencies
 src/misc/hstx_lab/lib/
 .gemini/

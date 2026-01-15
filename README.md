@@ -28,6 +28,41 @@ PicoHDMI leverages the RP2350's dedicated **HSTX (High-Speed Transmit)** periphe
 3. Link against `pico_hdmi`.
 4. Initialize with `video_output_init()` and run the output loop on Core 1 with `video_output_core1_run()`.
 
+## Development
+
+This project uses `clang-format` and `clang-tidy` to maintain code quality.
+
+### Prerequisites
+
+- **pre-commit**: To automatically run checks before each commit.
+
+On macOS, you can install it via Homebrew:
+
+```bash
+brew install pre-commit
+```
+
+On Linux:
+```bash
+pip install pre-commit
+```
+
+### Setup Hooks
+
+To activate the git pre-commit hooks, run:
+
+```bash
+pre-commit install
+```
+
+Once installed, the hooks will automatically format your code and run static analysis whenever you commit.
+
+To manually run the checks on all files:
+
+```bash
+pre-commit run --all-files
+```
+
 ## Roadmap for Reusability
 
 For details on the planned transition to a fully generic library, see [REUSABILITY.md](./REUSABILITY.md).

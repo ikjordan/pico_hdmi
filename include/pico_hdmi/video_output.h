@@ -18,12 +18,8 @@
 #define MODE_V_BACK_PORCH 33
 #define MODE_V_ACTIVE_LINES 480
 
-#define MODE_H_TOTAL_PIXELS                                                    \
-  (MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH +                \
-   MODE_H_ACTIVE_PIXELS)
-#define MODE_V_TOTAL_LINES                                                     \
-  (MODE_V_FRONT_PORCH + MODE_V_SYNC_WIDTH + MODE_V_BACK_PORCH +                \
-   MODE_V_ACTIVE_LINES)
+#define MODE_H_TOTAL_PIXELS (MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS)
+#define MODE_V_TOTAL_LINES (MODE_V_FRONT_PORCH + MODE_V_SYNC_WIDTH + MODE_V_BACK_PORCH + MODE_V_ACTIVE_LINES)
 
 // Frame dimensions (set via video_output_init)
 extern uint16_t frame_width;
@@ -45,9 +41,9 @@ typedef void (*video_output_vsync_cb_t)(void);
 /**
  * Scanline Callback:
  * Called by the DVI library when it needs pixel data for a scanline.
- * 
+ *
  * @param v_scanline The current vertical scanline (0 to MODE_V_TOTAL_LINES - 1)
- * @param active_line The current active video line (0 to MODE_V_ACTIVE_LINES - 1), 
+ * @param active_line The current active video line (0 to MODE_V_ACTIVE_LINES - 1),
  *                    only valid if active_video is true.
  * @param line_buffer Buffer to fill with 640 RGB565 pixels (packed as uint32_t pairs).
  *                    The buffer MUST be filled with (MODE_H_ACTIVE_PIXELS / 2) uint32_t words.

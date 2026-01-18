@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
-# RP2350 required for HSTX (WeAct RP2350B board)
-set(PICO_BOARD weact_studio_rp2350b_core CACHE STRING "Board type")
+# RP2350 Raspberry Pi Pico 2
+set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 # Pull in SDK
 include($ENV{PICO_SDK_PATH}/pico_sdk_init.cmake)

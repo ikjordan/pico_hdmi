@@ -7,7 +7,7 @@
  * - HDMI audio (Für Elise melody)
  * - Simple animation
  *
- * Target: RP2350 (WeAct RP2350B)
+ * Target: RP2350 (Raspberry Pi Pico 2)
  */
 
 #include "pico_hdmi/hstx_data_island_queue.h"

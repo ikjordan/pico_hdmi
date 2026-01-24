@@ -15,6 +15,26 @@ PicoHDMI leverages the RP2350's dedicated **HSTX (High-Speed Transmit)** periphe
 - **Data Island Queue**: Lock-free queue for asynchronous packet posting from other cores.
 - **Double-Buffered DMA**: Stable video output with minimal jitter.
 
+## Scanline Callback Timing
+
+The scanline callback runs during h-blank with very limited time:
+
+| Clock    | H-Blank Window | CPU Cycles | ~Instructions |
+|----------|----------------|------------|---------------|
+| 126 MHz  | ~6 µs          | ~800       | 500-700       |
+| 252 MHz  | ~6 µs          | ~1600      | 1000-1400     |
+
+A simple 320→640 pixel copy/double alone takes ~400-600 cycles. This leaves almost no room for additional processing.
+
+**Guidelines:**
+- Do heavy lifting elsewhere (different core or outside the callback)
+- Use the callback only to feed pre-computed data into the DMA buffer
+- Avoid per-pixel branching; use loop splitting instead
+- Process 2 pixels per iteration (32-bit ops)
+- Keep callback code in zero-wait-state RAM (`__scratch_x`)
+
+The callback exists for flexibility (e.g., upscale from a smaller source buffer on-the-fly) rather than for processing. Pre-render everything, then just copy.
+
 ## Directory Structure
 
 - `include/pico_hdmi/`: Public headers. Use `#include <pico_hdmi/...>` in your project.

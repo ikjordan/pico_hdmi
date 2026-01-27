@@ -83,7 +83,7 @@ bool video_output_get_dvi_mode(void);
  * Set DVI mode.
  * When enabled, disables all HDMI Data Islands (no audio output).
  * Some monitors have trouble syncing with HDMI Data Islands.
- * Default: true (DVI mode) for maximum compatibility.
+ * Default: false (HDMI mode with audio).
  * @param enabled true for DVI mode, false for HDMI mode with audio
  */
 void video_output_set_dvi_mode(bool enabled);

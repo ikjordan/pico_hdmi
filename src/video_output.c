@@ -53,7 +53,7 @@ volatile uint32_t video_frame_count = 0;
 
 // DVI mode: when true, disables all HDMI Data Islands (pure DVI output, no audio)
 // Some monitors have trouble syncing with HDMI Data Islands
-static bool dvi_mode = true; // Default to DVI mode for maximum compatibility
+static bool dvi_mode = false; // Default to HDMI mode (full features with audio)
 
 static uint16_t line_buffer[MODE_H_ACTIVE_PIXELS] __attribute__((aligned(4)));
 static uint32_t v_scanline = 2;

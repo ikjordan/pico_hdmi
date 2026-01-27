@@ -51,6 +51,10 @@ uint16_t frame_width = 0;
 uint16_t frame_height = 0;
 volatile uint32_t video_frame_count = 0;
 
+// DVI mode: when true, disables all HDMI Data Islands (pure DVI output, no audio)
+// Some monitors have trouble syncing with HDMI Data Islands
+static bool dvi_mode = true; // Default to DVI mode for maximum compatibility
+
 static uint16_t line_buffer[MODE_H_ACTIVE_PIXELS] __attribute__((aligned(4)));
 static uint32_t v_scanline = 2;
 static bool vactive_cmdlist_posted = false;
@@ -67,6 +71,7 @@ static video_output_vsync_cb_t vsync_callback = NULL;
 // Command Lists
 // ============================================================================
 
+// Pure DVI command lists (no Data Islands)
 static uint32_t vblank_line_vsync_off[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PORCH,
                                            SYNC_V1_H1,
                                            HSTX_CMD_NOP,
@@ -76,6 +81,27 @@ static uint32_t vblank_line_vsync_off[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PO
                                            HSTX_CMD_RAW_REPEAT | (MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS),
                                            SYNC_V1_H1,
                                            HSTX_CMD_NOP};
+
+static uint32_t vblank_line_vsync_on[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PORCH,
+                                          SYNC_V0_H1,
+                                          HSTX_CMD_NOP,
+                                          HSTX_CMD_RAW_REPEAT | MODE_H_SYNC_WIDTH,
+                                          SYNC_V0_H0,
+                                          HSTX_CMD_NOP,
+                                          HSTX_CMD_RAW_REPEAT | (MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS),
+                                          SYNC_V0_H1,
+                                          HSTX_CMD_NOP};
+
+// Active video line for DVI mode (no Data Island, just sync + pixels)
+static uint32_t vactive_line_dvi[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PORCH,
+                                      SYNC_V1_H1,
+                                      HSTX_CMD_NOP,
+                                      HSTX_CMD_RAW_REPEAT | MODE_H_SYNC_WIDTH,
+                                      SYNC_V1_H0,
+                                      HSTX_CMD_NOP,
+                                      HSTX_CMD_RAW_REPEAT | MODE_H_BACK_PORCH,
+                                      SYNC_V1_H1,
+                                      HSTX_CMD_TMDS | MODE_H_ACTIVE_PIXELS};
 
 static uint32_t vactive_di_ping[128], vactive_di_pong[128], vactive_di_null[128];
 static uint32_t vactive_di_len, vactive_di_null_len;
@@ -198,15 +224,26 @@ static inline void __scratch_x("") get_scanline_state(uint32_t v_scanline, scanl
 
 static inline void __scratch_x("") video_output_handle_vsync(dma_channel_hw_t *ch, uint32_t v_scanline)
 {
-    if (v_scanline == MODE_V_FRONT_PORCH) {
-        ch->read_addr = (uintptr_t)vblank_acr_vsync_on;
-        ch->transfer_count = vblank_acr_vsync_on_len;
-        video_frame_count++;
-        if (vsync_callback)
-            vsync_callback();
+    if (dvi_mode) {
+        // Pure DVI: simple vsync line without Data Islands
+        ch->read_addr = (uintptr_t)vblank_line_vsync_on;
+        ch->transfer_count = count_of(vblank_line_vsync_on);
+        if (v_scanline == MODE_V_FRONT_PORCH) {
+            video_frame_count++;
+            if (vsync_callback)
+                vsync_callback();
+        }
     } else {
-        ch->read_addr = (uintptr_t)vblank_infoframe_vsync_on;
-        ch->transfer_count = vblank_infoframe_vsync_on_len;
+        if (v_scanline == MODE_V_FRONT_PORCH) {
+            ch->read_addr = (uintptr_t)vblank_acr_vsync_on;
+            ch->transfer_count = vblank_acr_vsync_on_len;
+            video_frame_count++;
+            if (vsync_callback)
+                vsync_callback();
+        } else {
+            ch->read_addr = (uintptr_t)vblank_infoframe_vsync_on;
+            ch->transfer_count = vblank_infoframe_vsync_on_len;
+        }
     }
 }
 
@@ -224,37 +261,52 @@ static inline void __scratch_x("")
         }
     }
 
-    uint32_t *buf = dma_pong ? vactive_di_ping : vactive_di_pong;
-    const uint32_t *di_words = hstx_di_queue_get_audio_packet();
-    if (di_words) {
-        vactive_di_len = build_line_with_di(buf, di_words, false, true);
-        ch->read_addr = (uintptr_t)buf;
-        ch->transfer_count = vactive_di_len;
+    if (dvi_mode) {
+        // Pure DVI: simple active line without Data Islands
+        ch->read_addr = (uintptr_t)vactive_line_dvi;
+        ch->transfer_count = count_of(vactive_line_dvi);
     } else {
-        ch->read_addr = (uintptr_t)vactive_di_null;
-        ch->transfer_count = vactive_di_null_len;
+        uint32_t *buf = dma_pong ? vactive_di_ping : vactive_di_pong;
+        const uint32_t *di_words = hstx_di_queue_get_audio_packet();
+        if (di_words) {
+            vactive_di_len = build_line_with_di(buf, di_words, false, true);
+            ch->read_addr = (uintptr_t)buf;
+            ch->transfer_count = vactive_di_len;
+        } else {
+            ch->read_addr = (uintptr_t)vactive_di_null;
+            ch->transfer_count = vactive_di_null_len;
+        }
     }
 }
 
 static inline void __scratch_x("")
     video_output_handle_blanking(dma_channel_hw_t *ch, uint32_t v_scanline, bool send_acr, bool dma_pong)
 {
-    if (send_acr) {
-        ch->read_addr = (uintptr_t)vblank_acr_vsync_off;
-        ch->transfer_count = vblank_acr_vsync_off_len;
-    } else if (v_scanline == 0) {
-        ch->read_addr = (uintptr_t)vblank_avi_infoframe;
-        ch->transfer_count = vblank_avi_infoframe_len;
+    if (dvi_mode) {
+        // Pure DVI: simple blanking line without Data Islands
+        (void)send_acr;
+        (void)dma_pong;
+        (void)v_scanline;
+        ch->read_addr = (uintptr_t)vblank_line_vsync_off;
+        ch->transfer_count = count_of(vblank_line_vsync_off);
     } else {
-        const uint32_t *di_words = hstx_di_queue_get_audio_packet();
-        if (di_words) {
-            uint32_t *buf = dma_pong ? vblank_di_ping : vblank_di_pong;
-            vblank_di_len = build_line_with_di(buf, di_words, false, false);
-            ch->read_addr = (uintptr_t)buf;
-            ch->transfer_count = vblank_di_len;
+        if (send_acr) {
+            ch->read_addr = (uintptr_t)vblank_acr_vsync_off;
+            ch->transfer_count = vblank_acr_vsync_off_len;
+        } else if (v_scanline == 0) {
+            ch->read_addr = (uintptr_t)vblank_avi_infoframe;
+            ch->transfer_count = vblank_avi_infoframe_len;
         } else {
-            ch->read_addr = (uintptr_t)vblank_di_null;
-            ch->transfer_count = vblank_di_null_len;
+            const uint32_t *di_words = hstx_di_queue_get_audio_packet();
+            if (di_words) {
+                uint32_t *buf = dma_pong ? vblank_di_ping : vblank_di_pong;
+                vblank_di_len = build_line_with_di(buf, di_words, false, false);
+                ch->read_addr = (uintptr_t)buf;
+                ch->transfer_count = vblank_di_len;
+            } else {
+                ch->read_addr = (uintptr_t)vblank_di_null;
+                ch->transfer_count = vblank_di_null_len;
+            }
         }
     }
 }
@@ -276,8 +328,8 @@ void __scratch_x("") dma_irq_handler()
     dma_hw->intr = 1U << ch_num;
     dma_pong = !dma_pong;
 
-    // Advance audio/data-island scheduler exactly once per scanline
-    if (!vactive_cmdlist_posted) {
+    // Advance audio/data-island scheduler exactly once per scanline (HDMI mode only)
+    if (!dvi_mode && !vactive_cmdlist_posted) {
         hstx_di_queue_tick();
     }
 
@@ -312,6 +364,7 @@ void video_output_init(uint16_t width, uint16_t height)
     dma_channel_claim(DMACH_PING);
     dma_channel_claim(DMACH_PONG);
 
+    // Initialize HDMI Data Island packets (needed if user switches to HDMI mode)
     hstx_packet_t packet;
     hstx_data_island_t island;
 
@@ -341,6 +394,16 @@ void video_output_init(uint16_t width, uint16_t height)
 void video_output_set_background_task(video_output_task_fn task)
 {
     background_task = task;
+}
+
+bool video_output_get_dvi_mode(void)
+{
+    return dvi_mode;
+}
+
+void video_output_set_dvi_mode(bool enabled)
+{
+    dvi_mode = enabled;
 }
 
 void video_output_set_scanline_callback(video_output_scanline_cb_t cb)

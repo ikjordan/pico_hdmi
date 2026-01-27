@@ -74,6 +74,21 @@ void video_output_set_vsync_callback(video_output_vsync_cb_t cb);
 void video_output_set_background_task(video_output_task_fn task);
 
 /**
+ * Get DVI mode status.
+ * @return true if DVI mode (no HDMI audio), false if HDMI mode
+ */
+bool video_output_get_dvi_mode(void);
+
+/**
+ * Set DVI mode.
+ * When enabled, disables all HDMI Data Islands (no audio output).
+ * Some monitors have trouble syncing with HDMI Data Islands.
+ * Default: true (DVI mode) for maximum compatibility.
+ * @param enabled true for DVI mode, false for HDMI mode with audio
+ */
+void video_output_set_dvi_mode(bool enabled);
+
+/**
  * Core 1 entry point for video output.
  * This function does not return.
  */

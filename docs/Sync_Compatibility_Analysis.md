@@ -2,15 +2,29 @@
 
 Investigation of sync failures with Acer XB271HU and Samsung Q80 TV.
 
-## Summary of Findings
+## Status: PARTIAL
 
-**Root Cause Identified**: Missing Video Preamble and Video Guard Band before active video data.
+**Video Guard Band Fix** (Commit `83d9692`): Added Video Preamble and Video Guard Band before active video.
 
-| Issue | Priority | Likely Impact |
-|-------|----------|---------------|
-| Missing Video Preamble/Guard Band | **Critical** | Very High |
-| Minimal AVI InfoFrame | Medium | Moderate |
-| No General Control Packet (GCP) | Low | Low-Moderate |
+| Display | Status | Notes |
+|---------|--------|-------|
+| Morph4K | ✓ Working | No errors, audio/video good |
+| Acer XB271HU | ✓ Working | Audio/video good |
+| Samsung Q80 TV | ✗ Not syncing | Still investigating |
+
+## Remaining Issues
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| Missing Video Preamble/Guard Band | Critical | ✓ Fixed |
+| Minimal AVI InfoFrame | Medium | Open - may affect Samsung |
+| No General Control Packet (GCP) | Medium | Open - may affect Samsung |
+
+## Next Steps
+
+1. Test Samsung Q80 in DVI mode to isolate issue
+   - If DVI works: Problem is in Data Islands (InfoFrames, GCP, audio)
+   - If DVI fails: Problem is in video timing
 
 ---
 

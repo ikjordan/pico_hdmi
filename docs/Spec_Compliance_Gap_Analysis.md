@@ -2,12 +2,27 @@
 
 Analysis of current implementation against HDMI specification requirements.
 
+## Recent Fixes
+
+### Video Preamble & Guard Band (2026-01-31)
+
+**Issue**: Missing Video Preamble (8 pixels) and Video Guard Band (2 pixels) before active video data in HDMI mode.
+
+**Impact**: Sync failures on strict displays (Acer XB271HU, Samsung Q80 TV).
+
+**Fix**: Commit `83d9692` added proper Video Preamble (CH0=sync, CH1=CTRL_01, CH2=CTRL_00) and Video Guard Band (CH0=0x2CC, CH1=0x133, CH2=0x2CC) per HDMI 1.3a Section 5.2.2.
+
+**Status**: ✓ Fixed - Acer XB271HU now works. Samsung Q80 TV still not syncing (further investigation needed).
+
+---
+
 ## Summary
 
 | Category | Status | Priority |
 |----------|--------|----------|
 | TMDS Encoding | Complete | - |
 | Control Symbols | Complete | - |
+| Video Preamble | Complete | - |
 | Video Guard Band | Complete | - |
 | Data Island Guard Band | Complete | - |
 | Packet Structure & ECC | Complete | - |

@@ -86,10 +86,6 @@ To manually run the checks on all files:
 pre-commit run --all-files
 ```
 
-## Roadmap for Reusability
-
-For details on the planned transition to a fully generic library, see [REUSABILITY.md](./REUSABILITY.md).
-
 ## License
 
 Unlicense

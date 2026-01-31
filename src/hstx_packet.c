@@ -289,6 +289,8 @@ static void encode_subpackets_to_lanes(const hstx_packet_t *packet, uint16_t *la
 
 void hstx_encode_data_island(hstx_data_island_t *out, const hstx_packet_t *packet, bool vsync_active, bool hsync_active)
 {
+    // REVERTED: vsync_active/hsync_active indicate pulse region, not signal level
+    // For 640x480 (negative polarity), pulse region means signal=0
     int hv = (vsync_active ? 0 : 2) | (hsync_active ? 0 : 1);
     uint16_t lane0[32];
     uint16_t lane1[32];

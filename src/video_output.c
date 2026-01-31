@@ -32,8 +32,18 @@
 #define SYNC_V1_H1 (TMDS_CTRL_11 | (TMDS_CTRL_00 << 10) | (TMDS_CTRL_00 << 20))
 
 // Data Island preamble: Lane 0 = sync, Lanes 1&2 = CTRL_01 pattern
+// Per HDMI 1.3a Table 5-2: CTL0=1, CTL1=0, CTL2=1, CTL3=0
 #define PREAMBLE_V0_H0 (TMDS_CTRL_00 | (TMDS_CTRL_01 << 10) | (TMDS_CTRL_01 << 20))
 #define PREAMBLE_V1_H0 (TMDS_CTRL_10 | (TMDS_CTRL_01 << 10) | (TMDS_CTRL_01 << 20))
+
+// Video preamble: Lane 0 = sync, Lane 1 = CTRL_01, Lane 2 = CTRL_00
+// Per HDMI 1.3a Table 5-2: CTL0=1, CTL1=0, CTL2=0, CTL3=0
+#define VIDEO_PREAMBLE_V0_H1 (TMDS_CTRL_01 | (TMDS_CTRL_01 << 10) | (TMDS_CTRL_00 << 20))
+#define VIDEO_PREAMBLE_V1_H1 (TMDS_CTRL_11 | (TMDS_CTRL_01 << 10) | (TMDS_CTRL_00 << 20))
+
+// Video guard band: Per HDMI 1.3a Table 5-5
+// CH0 = 0b1011001100 (0x2CC), CH1 = 0b0100110011 (0x133), CH2 = 0b1011001100 (0x2CC)
+#define VIDEO_GUARD_BAND (0x2CCu | (0x133u << 10) | (0x2CCu << 20))
 
 #define HSTX_CMD_RAW (0x0u << 12)
 #define HSTX_CMD_RAW_REPEAT (0x1u << 12)
@@ -42,6 +52,10 @@
 #define HSTX_CMD_NOP (0xfu << 12)
 
 #define SYNC_AFTER_DI (MODE_H_SYNC_WIDTH - W_PREAMBLE - W_DATA_ISLAND)
+
+// Video preamble and guard band widths (HDMI 1.3a Section 5.2.2)
+#define W_VIDEO_PREAMBLE 8
+#define W_VIDEO_GUARD_BAND 2
 
 // ============================================================================
 // Audio/Video State
@@ -93,15 +107,10 @@ static uint32_t vblank_line_vsync_on[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_POR
                                           HSTX_CMD_NOP};
 
 // Active video line for DVI mode (no Data Island, just sync + pixels)
-static uint32_t vactive_line_dvi[] = {HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PORCH,
-                                      SYNC_V1_H1,
-                                      HSTX_CMD_NOP,
-                                      HSTX_CMD_RAW_REPEAT | MODE_H_SYNC_WIDTH,
-                                      SYNC_V1_H0,
-                                      HSTX_CMD_NOP,
-                                      HSTX_CMD_RAW_REPEAT | MODE_H_BACK_PORCH,
-                                      SYNC_V1_H1,
-                                      HSTX_CMD_TMDS | MODE_H_ACTIVE_PIXELS};
+static uint32_t vactive_line_dvi[] = {
+    HSTX_CMD_RAW_REPEAT | MODE_H_FRONT_PORCH, SYNC_V1_H1, HSTX_CMD_NOP,
+    HSTX_CMD_RAW_REPEAT | MODE_H_SYNC_WIDTH,  SYNC_V1_H0, HSTX_CMD_NOP,
+    HSTX_CMD_RAW_REPEAT | MODE_H_BACK_PORCH,  SYNC_V1_H1, HSTX_CMD_TMDS | MODE_H_ACTIVE_PIXELS};
 
 static uint32_t vactive_di_ping[128], vactive_di_pong[128], vactive_di_null[128];
 static uint32_t vactive_di_len, vactive_di_null_len;
@@ -184,8 +193,24 @@ static uint32_t build_line_with_di(uint32_t *buf, const uint32_t *di_words, bool
     *p++ = HSTX_CMD_NOP;
 
     if (active) {
-        *p++ = HSTX_CMD_RAW_REPEAT | MODE_H_BACK_PORCH;
+        // HDMI 1.3a Section 5.2.2: Video Data Period requires preamble and guard band
+        uint32_t video_preamble = vsync ? VIDEO_PREAMBLE_V0_H1 : VIDEO_PREAMBLE_V1_H1;
+
+        // Control period (back porch minus preamble and guard band)
+        *p++ = HSTX_CMD_RAW_REPEAT | (MODE_H_BACK_PORCH - W_VIDEO_PREAMBLE - W_VIDEO_GUARD_BAND);
         *p++ = sync_h1;
+        *p++ = HSTX_CMD_NOP;
+
+        // Video Preamble (8 pixels)
+        *p++ = HSTX_CMD_RAW_REPEAT | W_VIDEO_PREAMBLE;
+        *p++ = video_preamble;
+        *p++ = HSTX_CMD_NOP;
+
+        // Video Guard Band (2 pixels)
+        *p++ = HSTX_CMD_RAW_REPEAT | W_VIDEO_GUARD_BAND;
+        *p++ = VIDEO_GUARD_BAND;
+
+        // Active video pixels
         *p++ = HSTX_CMD_TMDS | MODE_H_ACTIVE_PIXELS;
     } else {
         *p++ = HSTX_CMD_RAW_REPEAT | (MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS);

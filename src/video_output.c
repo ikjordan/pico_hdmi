@@ -459,7 +459,8 @@ void video_output_core1_run(void)
     hstx_ctrl_hw->bit[0] = HSTX_CTRL_BIT0_CLK_BITS | HSTX_CTRL_BIT0_INV_BITS;
     hstx_ctrl_hw->bit[1] = HSTX_CTRL_BIT0_CLK_BITS;
     for (uint lane = 0; lane < 3; ++lane) {
-        int bit = 2 + (lane * 2);
+        static const int lane_to_output_bit[3] = {2, 6, 4};
+        int bit = lane_to_output_bit[lane];
         uint32_t lane_data_sel_bits = (lane * 10) << HSTX_CTRL_BIT0_SEL_P_LSB | (lane * 10 + 1)
                                                                                     << HSTX_CTRL_BIT0_SEL_N_LSB;
         hstx_ctrl_hw->bit[bit] = lane_data_sel_bits | HSTX_CTRL_BIT0_INV_BITS;

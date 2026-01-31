@@ -3,6 +3,12 @@ build/
 build_*/
 .claude/
 
+# Examples build artifacts
+/examples/CMakeCache.txt
+/examples/CMakeFiles
+/examples/Makefile
+/examples/cmake_install.cmake
+
 # Temporary capture files
 *.pbm
 *.png
